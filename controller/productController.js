@@ -1,6 +1,9 @@
 const Product = require('../models/productModel');
+const User = require('../models/userModel');
 const asyncHandler = require('express-async-handler');
 const slugify = require('slugify');
+const { cloudinaryUploadImg, cloudinaryDeleteImg } = require('../utils/cloudinary');
+const fs = require('fs')
 // Fetch All Products
 const getProducts = asyncHandler(async (req, res) => {
     try {
@@ -94,6 +97,7 @@ const updateProduct = asyncHandler(async (req, res) => {
     }
 })
 
+// Delete Product
 const deleteProduct = asyncHandler(async (req, res) => {
     try {
         const { id } = req.params;
@@ -106,11 +110,93 @@ const deleteProduct = asyncHandler(async (req, res) => {
     }
 })
 
+// Add Procut To User's Wishlist
 
+const rating = asyncHandler(async (req, res) => {
+    try {
+        const { _id } = req.user;
+        const { star, productId, comment } = req.body;
+        let product = await Product.findById(productId);
+        let alreadyRated = product
+            .ratings
+            .find((userId) =>
+                userId.postedBy.toString() == _id.toString()
+            )
+        //console.log(alreadyRated)
+        if (alreadyRated) {
+            product = await Product.updateOne(
+                {
+                    ratings: { $elemMatch: alreadyRated },
+                },
+                {
+                    $set: { "ratings.$.star": star, "ratings.$.comment": comment }
+                }, { new: true }
+            )
+            console.log('exist');
+        } else {
+            console.log('exist not');
+            product = await Product.findByIdAndUpdate(productId, {
+                $push: {
+                    ratings: {
+                        star: star,
+                        postedBy: _id,
+                        comment: comment
+                    }
+                }
+            }, { new: true })
+        }
+        const getAllRatings = await Product.findById(productId);
+        let totalRating = getAllRatings.ratings.length;
+        let sumRatings = getAllRatings.ratings.map((item) => item.star).reduce((prev, current) => prev + current)
+        let actualRating = Math.round(sumRatings / totalRating);
+        product = await Product.findByIdAndUpdate(productId, {
+            totalrating: actualRating
+        }, { new: true })
+
+        res.json(product)
+    } catch (error) {
+        throw new Error(error);
+    }
+})
+
+const uploadImages = asyncHandler(async (req, res) => {
+    try {
+        const uploader = (path) => cloudinaryUploadImg(path, 'images');
+        const urls = [];
+        const files = req.files;
+        for (const f of files) {
+            const { path } = f;
+            const newPath = await uploader(path);
+            urls.push(newPath);
+            fs.unlinkSync(path)
+        }
+        const imgs = urls.map((file) => {
+            return file;
+        });
+        res.json(imgs);
+    } catch (error) {
+        throw new Error(error);
+    }
+})
+
+const deleteImages = asyncHandler(async (req, res) => {
+    try {
+        const { id } = req.params;
+        const deleted = cloudinaryDeleteImg(id, "images")
+        res.json({
+            message: "Deleted"
+        })
+    } catch (error) {
+        throw new Error(error);
+    }
+})
 module.exports = {
     getProducts,
     getProductByID,
     createProduct,
     updateProduct,
     deleteProduct,
+    rating,
+    uploadImages,
+    deleteImages,
 };

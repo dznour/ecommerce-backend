@@ -34,10 +34,7 @@ var blogSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
     }],
-    image: {
-        type: String,
-        default: 'https://miposicionamientoweb.es/wp-content/uploads/2022/06/que-es-un-blog-y-para-que-sirve-todo-sobre-el-blogging_.png'
-    },
+    images: [],
     author: {
         type: String,
         default: 'Admin'
