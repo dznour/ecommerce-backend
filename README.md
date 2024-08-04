@@ -1,2 +1,2 @@
 # ecommerce-backend
-Learning MERN Stack, This is the backend of it
+API for Ecommerce Application Using Node & Express JS
